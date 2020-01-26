@@ -53,7 +53,7 @@ class FilmSerializer(serializers.ModelSerializer):
             'upvotes': {'read_only': True},
             'downvotes': {'read_only': True}
         }
-   
+
 class FilmSerializerInUserProfile(serializers.ModelSerializer):
     """Serializes film"""
 

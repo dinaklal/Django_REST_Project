@@ -16,7 +16,7 @@ from django.shortcuts import get_object_or_404
 from test_api import serializers
 from test_api import models
 from test_api import permissions
-from .models import film,UserProfile
+from .models import film,UserProfile,Review
 
 
 
@@ -30,6 +30,20 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.UpdateOwnProfile,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name', 'email',)
+    @action(detail=False)
+    def recom_movies(self, request, *args, **kwargs):    
+        serializer = self.serializer_class(data=request.data,
+                                       context={'request': request})
+        queryset = film.objects.all()
+        serializer.is_valid()
+        user = request.user
+        print(user)
+        if request.user.is_authenticated:
+            recom = film.objects.filter(genre =user.favourite_genre ).values('name','release_date','genre')
+            serializer = serializers.FilmSerializerInUserProfile(recom,many=True)   
+            return Response(serializer.data)
+        else:
+            return Response("Please Log In to get recommended movies (Use token)",status=status.HTTP_400_BAD_REQUEST)
 
 class updateFavGenre(UpdateAPIView):
     serializer_class =  serializers.UpFavSerializer
@@ -66,7 +80,7 @@ class UserLoginApiView(ObtainAuthToken):
             'favourite_genre':user.favourite_genre,
             'recommended_movies':serializer.data
         })
-
+    
 
 class ReviewViewSet(viewsets.ModelViewSet):
     """Handles creating, reading and updating profile feed items"""
@@ -91,10 +105,12 @@ class filmViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """sets upvote and downvotes to 0 at first"""
         serializer.save(upvotes=0,downvotes=0)
+   
     
     @action(detail=False)
     def top_rated(self, request, *args, **kwargs):        
-        queryset = film.objects.all()
+        queryset=models.film.objects.all().order_by('-upvotes')[:2]
+
         serializer = serializers.FilmSerializer(queryset,many=True)   
         return Response(serializer.data)
     
